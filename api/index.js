@@ -39,8 +39,10 @@ const createApp = async () => {
     app.use(express.static(path.join(__dirname, '../public')));
 
     // Body parser
+    app.use(express.urlencoded({
+    extended: true
+    }));
     app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
 
     // CORS
     app.use(cors());

@@ -1,44 +1,27 @@
 const { model, Schema, models } = require("mongoose");
 
 const HistorySchema = new Schema({
-    type: {
-        type: String,
-        required: true,
-        default: "Null"
-    },
-    note: {
-        type: String,
-        required: false
-    },
     amount: {
         type: Number,
-        required: true
-    },
-    reference: {
-        type: String,
         required: true
     },
     userID: {
         type: String,
         required: true
     },
-    user: {
-        type: Object,
-        required: true
-    },
-    method: {
+    username: {
         type: String,
         required: true
     },
     status: {
-        type: String,
-        required: false,
-        default: "pending"
+        type: Boolean,
+        required: true,
+        default: false
     },
     date: {
         type: Date,
         required: false,
-        default: Date.now
+        default: Date.now()
     }
 });
 

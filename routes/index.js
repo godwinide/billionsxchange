@@ -1,67 +1,68 @@
-const Site = require("../model/Site");
-
 const router = require("express").Router();
 
-
-router.get("/", async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("index", { pageTitle: "Welcome", site, req, res });
+router.get("/", (req,res) => {
+    try{
+        return res.render("index", {pageTitle: "Welcome", req});
     }
-    catch (err) {
+    catch(err){
         return res.redirect(303, "/");
     }
 });
 
-router.get("/about", async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("about-us", { pageTitle: "Welcome", site, req, res });
+router.get("/about", (req,res) => {
+    try{
+        return res.render("about", {pageTitle: "About Us", req});
     }
-    catch (err) {
+    catch(err){
         return res.redirect(303, "/");
     }
 });
 
-router.get("/contact-us", async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("contact-us", { pageTitle: "Welcome", site, req, res });
+router.get("/investment", (req,res) => {
+    try{
+        return res.render("investment", {pageTitle: "Investment", req});
     }
-    catch (err) {
+    catch(err){
         return res.redirect(303, "/");
     }
 });
 
-router.get("/market-data", async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("market-data", { pageTitle: "Welcome", site, req, res });
+router.get("/partners", (req,res) => {
+    try{
+        return res.render("partners", {pageTitle: "Partners", req});
     }
-    catch (err) {
+    catch(err){
         return res.redirect(303, "/");
     }
 });
 
-router.get("/services", async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("index", { pageTitle: "Welcome", site, req, res });
+router.get("/contact", (req,res) => {
+    try{
+        return res.render("support", {pageTitle: "contact", req});
     }
-    catch (err) {
+    catch(err){
         return res.redirect(303, "/");
     }
 });
 
-router.get("/faq", async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("faq", { pageTitle: "Welcome", site, req, res });
+router.get("/terms", (req,res) => {
+    try{
+        return res.render("terms", {pageTitle: "Terms", req});
     }
-    catch (err) {
+    catch(err){
         return res.redirect(303, "/");
     }
 });
+
+router.get("/forgot_password", (req,res) => {
+    try{
+        return res.render("forgot", {pageTitle: "Forgot Password"});
+    }
+    catch(err){
+        return res.redirect(303, "/");
+    }
+});
+
 
 
 module.exports = router;

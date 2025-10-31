@@ -1,0 +1,329 @@
+<style>
+  .show-upgrade {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000000b2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100000;
+  }
+
+  .show-upgrade h3,
+  .show-upgrade p {
+    color: #fff;
+    text-align: center;
+  }
+
+  @media screen and (max-width: 1024px) {
+    .show-upgrade h3 {
+      font-size: 1.2em !important;
+      margin-bottom: 1em;
+    }
+
+    .show-upgrade p {
+      font-size: 1em !important;
+      line-height: 1.4em;
+    }
+  }
+</style>
+
+<div class="main-panel">
+  <% if(req.user.showUpgrade) {%>
+  <div class="show-upgrade">
+    <div class="">
+      <h3>Account Upgrade required</h3>
+      <p>Reach out to our customer support to request for an account upgrade</p>
+    </div>
+  </div>
+  <%}%>
+
+  <div class="content-wrapper">
+    <h3 class="text-white mb-3 text-center">Account Overview</h3>
+    <div class="tradingview-widget-container">
+      <div id="tradingview_f933e">
+        <div
+          id="tradingview_a1a3b-wrapper"
+          style="
+            position: relative;
+            box-sizing: content-box;
+            width: 1050px;
+            height: calc(500px - 32px);
+            margin: 0 auto !important;
+            padding: 0 !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS',
+              Roboto, Ubuntu, sans-serif;
+          "
+        >
+          <div
+            style="
+              width: 1050px;
+              height: calc(500px - 32px);
+              background: transparent;
+              padding: 0 !important;
+            "
+          >
+            <iframe
+              id="tradingview_a1a3b"
+              src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_a1a3b&amp;symbol=BITFINEX%3ABTCUSD&amp;interval=1&amp;hidesidetoolbar=0&amp;symboledit=1&amp;saveimage=1&amp;toolbarbg=f1f3f6&amp;calendar=1&amp;studies=BB%40tv-basicstudies&amp;theme=Dark&amp;style=9&amp;timezone=Etc%2FUTC&amp;studies_overrides=%7B%7D&amp;overrides=%7B%7D&amp;enabled_features=%5B%5D&amp;disabled_features=%5B%5D&amp;locale=en&amp;utm_source=bitcryptodailytrade.com&amp;utm_medium=widget_new&amp;utm_campaign=chart&amp;utm_term=BITFINEX%3ABTCUSD"
+              style="
+                width: 100%;
+                height: 100%;
+                margin: 0 !important;
+                padding: 0 !important;
+              "
+              frameborder="0"
+              allowtransparency="true"
+              scrolling="no"
+              allowfullscreen=""
+            ></iframe>
+          </div>
+        </div>
+      </div>
+      <div class="tradingview-widget-copyright" style="width: 100%">
+        <a href="#" rel="noopener" target="_blank"
+          ><span class="blue-text"></span>
+          <span class="blue-text">Personal trading chart</span></a
+        >
+      </div>
+
+      <script
+        type="text/javascript"
+        src="https://s3.tradingview.com/tv.js"
+      ></script>
+      <script type="text/javascript">
+        new TradingView.widget({
+          width: "100%",
+          height: 250,
+          symbol: "BITFINEX:BTCUSD",
+          interval: "1",
+          timezone: "Etc/UTC",
+          theme: "Dark",
+          style: "9",
+          locale: "en",
+          toolbar_bg: "#f1f3f6",
+          enable_publishing: false,
+          hide_side_toolbar: false,
+          allow_symbol_change: true,
+          calendar: true,
+          studies: ["BB@tv-basicstudies"],
+          container_id: "tradingview_f933e",
+        });
+      </script>
+    </div>
+
+    <div class="row">
+      <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-9">
+                <div class="d-flex align-items-center align-self-start">
+                  <h3 class="mb-0">
+                    <%= req.user.currency%> <%=comma(req.user.active_deposit)%>
+                  </h3>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="icon icon-box-success">
+                  <span class="mdi mdi-cash icon-item"></span>
+                </div>
+              </div>
+            </div>
+            <h6 class="text-muted font-weight-normal">Active Deposit</h6>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-9">
+                <div class="d-flex align-items-center align-self-start">
+                  <h3 class="mb-0">
+                    <%= req.user.currency%> <%=comma(req.user.balance)%>
+                  </h3>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="icon icon-box-success">
+                  <span class="mdi mdi-cash icon-item"></span>
+                </div>
+              </div>
+            </div>
+            <h6 class="text-muted font-weight-normal">Your Balance</h6>
+            <a href="/withdraw" class="btn btn-success">Withdraw</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-9">
+                <div class="d-flex align-items-center align-self-start">
+                  <h3 class="mb-0">
+                    <%= req.user.currency%> <%=comma(req.user.total_earned)%>
+                  </h3>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="icon icon-box-success">
+                  <span class="mdi mdi-cash icon-item"></span>
+                </div>
+              </div>
+            </div>
+            <h6 class="text-muted font-weight-normal">Total Profit</h6>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-9">
+                <div class="d-flex align-items-center align-self-start">
+                  <h3 class="mb-0"><%=comma(req.user.pending_withdrawal)%></h3>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="icon icon-box-success">
+                  <span class="mdi mdi-cash icon-item"></span>
+                </div>
+              </div>
+            </div>
+            <h6 class="text-muted font-weight-normal">Pending</h6>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-6 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-9">
+                <div class="d-flex align-items-center align-self-start">
+                  <h3 class="mb-0">
+                    <%= req.user.currency%> <%=comma(req.user.last_deposit)%>
+                  </h3>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="icon icon-box-success">
+                  <span class="mdi mdi-cash icon-item"></span>
+                </div>
+              </div>
+            </div>
+            <h6 class="text-muted font-weight-normal">Last Deposit</h6>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-6 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-9">
+                <div class="d-flex align-items-center align-self-start">
+                  <h3 class="mb-0">
+                    <%= req.user.currency%><%=comma(req.user.total_withdraw)%>
+                  </h3>
+                </div>
+              </div>
+              <div class="col-3">
+                <div class="icon icon-box-success">
+                  <span class="mdi mdi-cash icon-item"></span>
+                </div>
+              </div>
+            </div>
+            <h6 class="text-muted font-weight-normal">Withdrawal</h6>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TradingView Widget BEGIN -->
+    <div class="tradingview-widget-container">
+      <div class="tradingview-widget-container__widget"></div>
+      <div class="tradingview-widget-copyright">
+        <a
+          href="https://www.tradingview.com/"
+          rel="noopener nofollow"
+          target="_blank"
+          ><span class="blue-text">Track all markets on TradingView</span></a
+        >
+      </div>
+      <script
+        type="text/javascript"
+        src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js"
+        async
+      >
+          {
+          "symbols": [
+            {
+              "proName": "FOREXCOM:SPXUSD",
+              "title": "S&P 500"
+            },
+            {
+              "proName": "FOREXCOM:NSXUSD",
+              "title": "US 100"
+            },
+            {
+              "proName": "FX_IDC:EURUSD",
+              "title": "EUR to USD"
+            },
+            {
+              "proName": "BITSTAMP:BTCUSD",
+              "title": "Bitcoin"
+            },
+            {
+              "proName": "BITSTAMP:ETHUSD",
+              "title": "Ethereum"
+            }
+          ],
+          "showSymbolLogo": true,
+          "colorTheme": "dark",
+          "isTransparent": false,
+          "displayMode": "adaptive",
+          "locale": "en"
+        }
+      </script>
+    </div>
+    <!-- TradingView Widget END -->
+
+    <!-- TradingView Widget BEGIN -->
+    <div class="tradingview-widget-container">
+      <div class="tradingview-widget-container__widget"></div>
+      <div class="tradingview-widget-copyright">
+        <a
+          href="https://www.tradingview.com/"
+          rel="noopener nofollow"
+          target="_blank"
+          ><span class="blue-text">Track all markets on TradingView</span></a
+        >
+      </div>
+      <script
+        type="text/javascript"
+        src="https://s3.tradingview.com/external-embedding/embed-widget-screener.js"
+        async
+      >
+          {
+          "width": "100%",
+          "height": 300,
+          "defaultColumn": "overview",
+          "screener_type": "crypto_mkt",
+          "displayCurrency": "USD",
+          "colorTheme": "dark",
+          "locale": "en"
+        }
+      </script>
+    </div>
+    <!-- TradingView Widget END -->
+  </div>
+</div>

@@ -1,310 +1,228 @@
 const router = require("express").Router();
 const User = require("../../model/User");
-const Deposit = require("../../model/Deposit");
-const Withdraw = require("../../model/Withdraw");
+const History = require("../../model/History");
 const { ensureAdmin } = require("../../config/auth");
-const comma = require("../../utils/comma");
-const bcrypt = require("bcryptjs");
-const Site = require("../../model/Site");
-const uuid = require("uuid");
-
+const bcrypt = require("bcryptjs/dist/bcrypt");
 
 router.get("/", ensureAdmin, async (req, res) => {
     try {
-        const users = await User.find({ isAdmin: false });
-        const pendingDeposits = await Deposit.find({ status: "pending" });
-        const pendingWithdrawals = await Withdraw.find({ status: "pending" });
-        return res.render("admin/dashboard", { layout: "layout3", comma, users, pendingDeposits, pendingWithdrawals, res, req });
+        const customers = await User.find({ isAdmin: false });
+        const history = await History.find({ status: false });
+        const total_bal = customers.reduce((prev, cur) => prev + Number(cur.balance), 0);
+        return res.render("admin/index", { layout: "admin/layout", pageTitle: "Welcome", customers, history, total_bal, req });
     }
     catch (err) {
         return res.redirect(303, "/admin");
     }
 });
 
-router.post("/", ensureAdmin, async (req, res) => {
+
+router.get("/approve-withdrawal/:id", ensureAdmin, async (req, res) => {
     try {
-        const users = await User.find({ isAdmin: false });
-        const pendingDeposits = await Deposit.find({ status: "pending" });
-        const pendingWithdrawals = await Withdraw.find({ status: "pending" });
-        return res.render("admin/dashboard", { layout: "layout3", comma, users, pendingDeposits, pendingWithdrawals, res, req });
+        const { id } = req.params;
+        const history = await History.findOne({ _id: id });
+        const user = await User.findById(history.userID);
+
+        await History.updateOne({
+            _id: id
+        }, { status: true });
+
+
+        await User.updateOne({ _id: history.userID }, {
+            pending_withdrawal: user.pending_withdrawal - history.amount,
+            total_withdraw: Number(user.total_withdraw) + history.amount
+        });
+
+        return res.render("admin/index", { layout: "admin/layout", pageTitle: "Welcome", customers, history, total_bal, req });
     }
     catch (err) {
         return res.redirect(303, "/admin");
     }
 });
 
-router.get("/settings", ensureAdmin, async (req, res) => {
+router.get("/cancel-withdrawal/:id", ensureAdmin, async (req, res) => {
     try {
-        const site = await Site.findOne();
-        return res.render("admin/settings", { req, res, site: site || {}, layout: "layout3" });
-    } catch (err) {
-        return res.redirect(303, "/admin")
-    }
-});
+        const { id } = req.params;
+        const history = await History.findOne({ _id: id });
+        const user = await User.findById(history.userID);
 
-router.post("/settings/addresses", ensureAdmin, async (req, res) => {
-    try {
-        const {
-            bitcoinAddress,
-            bchAddress,
-            ethereumAddress,
-            usdtAddress,
-            whatsappNumber
-        } = req.body;
-        const siteExists = await Site.findOne({});
-        if (siteExists) {
-            await Site.updateOne({ _id: siteExists._id }, {
-                bitcoinAddress: bitcoinAddress ? bitcoinAddress : siteExists.bitcoinAddress,
-                bchAddress: bchAddress ? bchAddress : siteExists.bchAddress,
-                ethereumAddress: ethereumAddress ? ethereumAddress : siteExists.ethereumAddress,
-                usdtAddress: usdtAddress ? usdtAddress : siteExists.usdtAddress,
-                whatsappNumber: whatsappNumber ? whatsappNumber : siteExists.whatsappNumber,
-            })
-        } else {
-            const newSite = new Site({
-                bitcoinAddress,
-                ethereumAddress,
-                usdtAddress,
-                whatsappNumber
-            });
-            await newSite.save();
-        }
-
-        req.flash("Addresses updated successfully");
-        return res.redirect(303, "/admin/settings");
-
-    } catch (err) {
-        return res.redirect(303, "/admin")
-    }
-});
-
-router.post("/settings", ensureAdmin, async (req, res) => {
-    try {
-        const { password, password2 } = req.body;
-        if (!password || !password2) {
-            req.flash("error_msg", "Enter new password");
-            return res.redirect(303, "/admin/settings");
-        }
-        if (password.length < 8) {
-            req.flash("error_msg", "Password should be at least 8 characters long");
-            return res.redirect(303, "/admin/settings")
-        }
-
-        if (password !== password2) {
-            req.flash("error_msg", "Passwords do not match");
-            return res.redirect(303, "/admin/settings");
-        }
-
-        const salt = await bcrypt.genSalt();
-        const hash = await bcrypt.hash(password, salt);
-
-        await User.updateOne({ email: req.user.email }, { password: hash })
-        req.flash("success_msg", "Password updated successfully");
-        return res.redirect(303, "/admin/settings");
-    } catch (err) {
-        return res.redirect(303, "/admin")
-    }
-});
-
-router.post("/credit-user/:client_id", ensureAdmin, async (req, res) => {
-    try {
-        const { client_id } = req.params;
-        const { amount } = req.body;
-        const user = await User.findById(client_id);
-        if (!user) {
-            req.flash("error_msg", "User with that Id not found");
-            return res.redirect(303, "/admin/edit-user/" + client_id)
-        }
-        const cleanAmount = Number(amount.trim());
-        user.balance = Number(user.balance) + cleanAmount;
-
-        const reference = uuid.v1().split("-").slice(0, 3).join("");
-
-        const newHist = new History({
-            type: "PROFIT",
-            amount: cleanAmount,
-            reference,
-            userID: client_id,
-            user,
-            method: 'Company Deposit',
-            status: 'approved'
+        await User.updateOne({ _id: history.userID }, {
+            pending_withdrawal: user.pending_withdrawal - history.amount,
+            balance: Number(req.user.balance) + Number(history.amount)
         });
 
-        await newHist.save();
-        await user.save();
+        await History.deleteOne({ _id: id });
 
-        req.flash("success_msg", "User credited successfully");
-        return res.redirect(303, "/admin/edit-user/" + client_id);
-
-    } catch (err) {
-        console.log(err);
-        req.flash("error_msg", "internal server error");
-        return res.redirect(303, "/admin/edit-user/" + req.params.client_id);
+        return res.render("admin/index", { layout: "admin/layout", pageTitle: "Welcome", customers, history, total_bal, req });
     }
-})
-
-router.post("/deposit-user/:client_id", ensureAdmin, async (req, res) => {
-    try {
-        const { client_id } = req.params;
-        const { amount } = req.body;
-        const user = await User.findById(client_id);
-        if (!user) {
-            req.flash("error_msg", "User with that Id not found");
-            return res.redirect(303, "/admin/edit-user/" + client_id)
-        }
-        const cleanAmount = Number(amount.trim());
-        user.balance = Number(user.balance) + cleanAmount;
-
-        const reference = uuid.v1().split("-").slice(0, 3).join("");
-
-        const newHist = new History({
-            type: "DEPOSIT",
-            amount: cleanAmount,
-            reference,
-            userID: client_id,
-            user,
-            method: 'Company Deposit',
-            status: 'approved'
-        });
-
-        await newHist.save();
-        await user.save();
-
-        req.flash("success_msg", "Account Deposit successfully");
-        return res.redirect(303, "/admin/edit-user/" + client_id);
-
-    } catch (err) {
-        console.log(err);
-        req.flash("error_msg", "internal server error");
-        return res.redirect(303, "/admin/edit-user/" + req.params.client_id);
-    }
-})
-
-router.get("/approve-deposit/:reference", ensureAdmin, async (req, res) => {
-    try {
-        const { reference } = req.params;
-        const dep = await Deposit.findOne({ reference });
-        const user = await User.findById(dep.userID);
-        await Deposit.updateOne({ reference }, { status: "approved" });
-        await History.updateOne({ reference }, { status: "approved" });
-        await User.updateOne({ _id: dep.userID }, {
-            balance: Number(user.balance) + Number(dep.amount),
-            invested: Number(user.invested) + Number(dep.amount)
-        });
-        req.flash("success_msg", "Deposit Approved");
+    catch (err) {
         return res.redirect(303, "/admin");
-    } catch (err) {
-        return res.redirect(303, "/admin")
-    }
-});
-
-router.get("/reject-deposit/:reference", ensureAdmin, async (req, res) => {
-    try {
-        const { reference } = req.params;
-        await Deposit.updateOne({ reference }, { status: "rejected" })
-        await History.updateOne({ reference }, { status: "rejected" })
-        req.flash("success_msg", "Deposit Rejected");
-        return res.redirect(303, "/admin");
-    } catch (err) {
-        return res.redirect(303, "/admin")
-    }
-});
-
-router.get("/approve-withdrawal/:reference", ensureAdmin, async (req, res) => {
-    try {
-        const { reference } = req.params;
-        await Withdraw.updateOne({ reference }, { status: "approved" })
-        await History.updateOne({ reference }, { status: "approved" })
-        req.flash("success_msg", "Withdrawal Approved");
-        return res.redirect(303, "/admin");
-    } catch (err) {
-        console.log(err);
-        return res.redirect(303, "/admin")
     }
 });
 
 
-router.get("/reject-withdrawal/:reference", ensureAdmin, async (req, res) => {
-    try {
-        const { reference } = req.params;
-        const withd = await Withdraw.findOne({ reference });
-        const user = await User.findById(withd.userID);
-        await Withdraw.updateOne({ reference }, { status: "rejected" });
-        await History.updateOne({ reference }, { status: "rejected" });
-        await User.updateOne({ _id: withd.userID }, {
-            balance: Number(user.balance) + Number(withd.amount)
-        });
-        req.flash("success_msg", "Withdrawal Rejected");
-        return res.redirect(303, "/admin");
-    } catch (err) {
-        return res.redirect(303, "/admin")
-    }
-});
-
-
-router.get("/delete-account/:clientID", ensureAdmin, async (req, res) => {
-    try {
-        const { clientID } = req.params;
-        await User.deleteOne({ _id: clientID });
-        req.flash("success_msg", "Account Deleted Succesfully");
-        return res.redirect(303, "/admin");
-    } catch (err) {
-        return res.redirect(303, "/admin")
-    }
-});
 
 router.get("/edit-user/:id", ensureAdmin, async (req, res) => {
     try {
-        const userID = req.params.id;
-        const client = await User.findById(userID);
-        return res.render("admin/editUser", { req, res, client, layout: "layout3" });
-    } catch (err) {
-        return res.redirect(303, "/admin")
+        const { id } = req.params;
+        const customer = await User.findOne({ _id: id });
+        return res.render("admin/editUser", { layout: "admin/layout", pageTitle: "Welcome", customer, req });
+    }
+    catch (err) {
+        return res.redirect(303, "/admin");
     }
 });
-
 
 router.post("/edit-user/:id", ensureAdmin, async (req, res) => {
     try {
+        const { id } = req.params;
         const {
-            firstname,
-            lastname,
             email,
-            balance,
-            invested,
-            upgrade,
-            disabled,
-            accountLevel,
-            cot,
+            username,
             phone,
             currency,
-            withdrawalPin
+            showUpgrade,
+            country,
+            security_question,
+            security_answer,
+            balance,
+            total_deposit,
+            active_deposit,
+            last_deposit,
+            total_earned,
+            last_withdraw,
+            total_withdraw,
+            pending_withdrawal,
+            debt,
+            userIP,
+            account_plan,
+            pin
         } = req.body;
-
-        const userID = req.params.id;
-
-        await User.updateOne({ _id: userID }, {
-            firstname,
-            lastname,
+        await User.updateOne({ _id: id }, {
             email,
-            balance,
-            invested,
-            disabled,
-            accountLevel,
-            upgrade,
-            cot,
+            username,
             phone,
             currency,
-            withdrawalPin
-        })
+            country,
+            security_question,
+            security_answer,
+            last_withdraw,
+            last_deposit,
+            showUpgrade,
+            userIP,
+            pending_withdrawal: pending_withdrawal || 0,
+            balance: balance || 0,
+            pin: pin || Number(String(Math.random()).slice(2, 8)),
+            total_deposit: total_deposit || 0,
+            total_earned: total_earned || 0,
+            active_deposit: active_deposit || 0,
+            total_withdraw: total_withdraw || 0,
+            debt: debt || 0,
+            account_plan: account_plan || "STARTER ($1,000 - $10,000)"
+        });
+        req.flash("success_msg", "account updated");
+        return res.redirect(303, "/admin/edit-user/" + id);
+    }
+    catch (err) {
+        console.log(err);
+        return res.redirect(303, "/admin");
+    }
+});
 
-        req.flash("success_msg", "Client Account updated successfully");
-
-        return res.redirect(303, "/admin/edit-user/" + userID)
+router.get("/delete-account/:id", ensureAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.redirect(303, "/admin");
+        }
+        await User.deleteOne({ _id: id });
+        return res.redirect(303, "/admin");
     } catch (err) {
         return res.redirect(303, "/admin")
     }
 });
 
+router.get("/deposit", ensureAdmin, async (req, res) => {
+    try {
+        const customers = await User.find({});
+        return res.render("admin/deposit", { layout: "admin/layout", pageTitle: "Deposit", customers, req });
+    } catch (err) {
+        return res.redirect(303, "/admin")
+    }
+});
+
+router.post("/deposit", ensureAdmin, async (req, res) => {
+    try {
+        const { amount, userID, debt } = req.body;
+        if (!amount || !userID || !debt) {
+            req.flash("error_msg", "Please provide all fields");
+            return res.redirect(303, "/admin/deposit");
+        }
+        const customer = await User.findOne({ _id: userID });
+        const newHistData = {
+            type: "Credit",
+            userID,
+            amount,
+            status: 'successful',
+            account: customer.email
+        }
+        const newHist = new History(newHistData);
+        await newHist.save();
+
+        await User.updateOne({ _id: userID }, {
+            balance: Number(customer.balance) + Number(amount),
+            active_deposit: Number(customer.active_deposit) + Number(amount),
+            debt,
+            total_deposit: Number(customer.total_deposit) + Number(amount)
+        });
+
+        req.flash("success_msg", "Deposit successful");
+        return res.redirect(303, "/admin/deposit");
+
+    } catch (err) {
+        console.log(err);
+        return res.redirect(303, "/admin");
+    }
+})
+
+router.get("/change-password", ensureAdmin, async (req, res) => {
+    try {
+        return res.render("admin/changePassword", { layout: "admin/layout", pageTitle: "Change Password", req });
+    } catch (err) {
+        console.log(err);
+        return res.redirect(303, "/admin");
+    }
+})
+
+router.post("/change-password", ensureAdmin, async (req, res) => {
+    try {
+        const { password, password2 } = req.body;
+        console.log(req.body);
+        if (!password || !password2) {
+            req.flash("error_msg", "Please provide fill all fields");
+            return res.redirect(303, "/admin/change-password");
+        }
+        else if (password !== password2) {
+            req.flash("error_msg", "Both passwords must be same");
+            return res.redirect(303, "/admin/change-password");
+        }
+        else if (password.length < 6) {
+            req.flash("error_msg", "Password too short")
+            return res.redirect(303, "/admin/change-password");
+        } else {
+            const salt = await bcrypt.genSalt();
+            const hash = await bcrypt.hash(password2, salt);
+            await User.updateOne({ _id: req.user.id }, {
+                password: hash
+            });
+            req.flash("success_msg", "password updated successfully");
+            return res.redirect(303, "/admin/change-password");
+        }
+
+    } catch (err) {
+        console.log(err);
+        return res.redirect(303, "/admin");
+    }
+})
 
 module.exports = router;

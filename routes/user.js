@@ -3,245 +3,183 @@ const { ensureAuthenticated } = require("../config/auth");
 const User = require("../model/User");
 const History = require("../model/History");
 const bcrypt = require("bcryptjs");
-const comma = require("../utils/comma");
-const Deposit = require("../model/Deposit");
-const uuid = require("uuid");
-const Withdraw = require("../model/Withdraw");
-const checkVerification = require("../config/verify");
-const Site = require("../model/Site");
+const comma = require("../utils/comma")
 
-router.get("/dashboard", ensureAuthenticated, checkVerification, async (req, res) => {
+router.get("/dashboard", ensureAuthenticated, (req, res) => {
     try {
-        const site = await Site.findOne();
-        const transactions = await History.find({ userID: req.user.id });
-        return res.render("dashboard", { res, pageTitle: "Dashboard", transactions, site, req, comma, layout: "layout2" });
+        return res.render("dashboard2", { pageTitle: "Dashbaord", req, comma, layout: false });
     } catch (err) {
-        return res.redirect(303, "/dashboard");
+        return res.redirect(303, "/");
     }
 });
 
-router.post("/dashboard", ensureAuthenticated, checkVerification, async (req, res) => {
+router.get("/dashboard2", (req, res) => {
     try {
-        const site = await Site.findOne();
-        const transactions = await History.find({ userID: req.user.id });
-        return res.render("dashboard", { res, pageTitle: "Dashboard", transactions, site, req, comma, layout: "layout2" });
+        return res.render("dashboard2", { pageTitle: "Dashbaord", req, comma, layout: "layout3" });
     } catch (err) {
-        return res.redirect(303, "/dashboard");
+        return res.redirect(303, "/");
     }
 });
 
-router.get("/locked", ensureAuthenticated, async (req, res) => {
+router.get("/deposit", ensureAuthenticated, (req, res) => {
     try {
-        const site = await Site.findOne();
-        return res.render("locked", { res, pageTitle: "Locked", req, site, comma, layout: "layout2" });
+        return res.render("deposit", { pageTitle: "Deposit Funds", req });
     } catch (err) {
-        return res.redirect(303, "/locked");
+        return res.redirect(303, "/");
     }
 });
 
-router.get("/deposit", ensureAuthenticated, checkVerification, async (req, res) => {
+router.post("/make-deposit", ensureAuthenticated, (req, res) => {
     try {
-        const site = await Site.findOne();
-        const deposits = await Deposit.find({ userID: req.user.id });
-        return res.render("deposit", { res, site, pageTitle: "Deposit", deposits, req, comma, layout: "layout2" });
+        const { amount } = req.body;
+        return res.render("makeDeposit", { pageTitle: "Deposit Funds", amount, req });
     } catch (err) {
-        return res.redirect(303, "/dashboard");
+        return res.redirect(303, "/");
     }
 });
 
-router.post("/deposit", ensureAuthenticated, checkVerification, async (req, res) => {
+router.get("/deposits", ensureAuthenticated, async (req, res) => {
     try {
-        const {
-            method,
-            amount
-        } = req.body;
+        const history = await History.find({ userID: req.user.id });
+        return res.render("deposits", { pageTitle: "Deposits", history, req });
+    } catch (err) {
+        return res.redirect(303, "/");
+    }
+});
 
-        if (!method || !amount) {
-            req.flash("error_msg", "Fill mandatory fields");
-            return res.redirect(303, "/deposit");
+router.get("/withdraw", ensureAuthenticated, (req, res) => {
+    try {
+        return res.render("withdraw", { pageTitle: "Withdraw Funds", req });
+    } catch (err) {
+        return res.redirect(303, "/");
+    }
+});
+
+router.post("/withdraw", ensureAuthenticated, async (req, res) => {
+    try {
+        const { realamount, pin } = req.body;
+        if (!realamount) {
+            req.flash("error_msg", "Please enter amount to withdraw");
+            return res.redirect(303, "/withdraw");
         }
-
-        const reference = uuid.v1().split("-").slice(0, 3).join("");
-
-        const newDeposit = new Deposit({
-            amount: Number(amount),
-            method,
-            userID: req.user.id,
-            user: req.user,
-            reference
-        });
-
-        const newHistory = new History({
-            amount: Number(amount),
-            method,
-            type: 'DEPOSIT',
-            userID: req.user.id,
-            user: req.user,
-            reference
-        });
-
-
-        await newDeposit.save();
-        await newHistory.save();
-
-        req.flash("success_msg", "Your deposit request has been submitted successfully!");
-        return res.redirect(303, "/deposit");
+        if (!pin) {
+            req.flash("error_msg", "Please enter withdrawal pin");
+            return res.redirect(303, "/withdraw");
+        }
+        if (pin != req.user.pin || !req.user.pin) {
+            req.flash("error_msg", "You have entered an incorrect PIN");
+            return res.redirect(303, "/withdraw");
+        }
+        if (req.user.balance < realamount || realamount < 0) {
+            req.flash("error_msg", "Insufficient balance. try and deposit.");
+            return res.redirect(303, "/withdraw");
+        }
+        if (req.user.debt > 0) {
+            req.flash("error_msg", "You can't withdraw because you still have to pay $" + req.user.debt + " cost of transfer fee");
+            return res.redirect(303, "/withdraw");
+        }
+        else {
+            const newHist = new History({
+                amount: realamount,
+                userID: req.user.id,
+                status: false,
+                username: req.user.username
+            });
+            await newHist.save();
+            await User.updateOne({ _id: req.user.id }, {
+                pending_withdrawal: Number(req.user.pending_withdrawal || 0) + Number(realamount),
+                balance: Number(req.user.balance) - Number(realamount)
+            })
+            req.flash("success_msg", `Your withdrawal request of ${comma(realamount)} has been received and is pending approval`);
+            return res.redirect(303, "/withdraw");
+        }
     } catch (err) {
         console.log(err)
-        req.flash("success_msg", "Your deposit request has been submitted successfully!");
-        return res.redirect(303, "/dashboard");
+        return res.redirect(303, "/");
     }
 });
 
-router.get("/withdraw", ensureAuthenticated, checkVerification, async (req, res) => {
+router.get("/history", ensureAuthenticated, async (req, res) => {
     try {
-        const site = await Site.findOne();
-        const withdrawals = await Withdraw.find({ userID: req.user.id });
-        return res.render("withdraw", { res, pageTitle: "Deposit", withdrawals, site, req, comma, layout: "layout2" });
+        const history = await History.find({ userID: req.user.id });
+        return res.render("history", { pageTitle: "Hisotry", history, req });
     } catch (err) {
-        return res.redirect(303, "/dashboard");
+        return res.redirect(303, "/");
     }
 });
 
-router.post("/withdraw", ensureAuthenticated, checkVerification, async (req, res) => {
+router.get("/settings", ensureAuthenticated, (req, res) => {
     try {
-        const {
-            method,
-            amount,
-            pin
-        } = req.body;
+        return res.render("settings", { pageTitle: "Account Settings", req });
+    } catch (err) {
+        return res.redirect(303, "/");
+    }
+});
 
+router.post("/update-personal", ensureAuthenticated, async (req, res) => {
+    try {
+        const { fullname, email, password, password2 } = req.body;
 
-        if (!method || !amount || !pin) {
-            req.flash("error_msg", "Fill mandatory fields");
-            return res.redirect(303, "/withdraw");
+        console.log(req.body)
+
+        if (!fullname || !email) {
+            req.flash("error_msg", "Provide fullname and email");
+            return res.redirect(303, "/settings");
         }
 
-        if (Number(amount) > Number(req.user.balance)) {
-            req.flash("error_msg", "Insufficient funds");
-            return res.redirect(303, "/withdraw");
+        if (password) {
+            if (password.length < 6) {
+                req.flash("error_msg", "Password is too short");
+                return res.redirect(303, "/settings");
+            }
+            if (password != password2) {
+                req.flash("error_msg", "Password are not equal");
+                return res.redirect(303, "/settings");
+            }
         }
 
-        if (req.user.withdrawalPin != pin) {
-            req.flash("error_msg", "Incorrect Transfer PIN");
-            return res.redirect(303, "/withdraw");
+        const update = {
+            fullname,
+            email
         }
 
-        if (req.user.cot > 0) {
-            req.flash("error_msg", `To process the transaction, a transfer fee of $${req.user.cot} is required as a deposit.`);
-            return res.redirect(303, "/withdraw");
+        if (password) {
+            const salt = await bcrypt.genSalt();
+            const hash = await bcrypt.hash(password2, salt);
+            update.password = hash;
         }
 
-        const reference = uuid.v1().split("-").slice(0, 3).join("");
+        await User.updateOne({ _id: req.user.id }, update);
+        req.flash("success_msg", "Account updated successfully")
+        return res.redirect(303, "/settings");
 
-        const newWithdraw = new Withdraw({
-            amount: Number(amount),
-            method,
-            userID: req.user.id,
-            user: req.user,
-            reference
-        });
-
-        const newHistory = new History({
-            amount: Number(amount),
-            method,
-            type: 'DEPOSIT',
-            userID: req.user.id,
-            user: req.user,
-            reference
-        });
-
-        await newWithdraw.save();
-        await newHistory.save()
-        await User.updateOne({ _id: req.user.id }, {
-            balance: req.user.balance - Number(amount)
-        })
-
-        req.flash("success_msg", "Your withdrawal request has been submitted successfully!");
-        return res.redirect(303, "/withdraw");
     } catch (err) {
-        console.log(err)
-        return res.redirect(303, "/dashboard");
+
     }
 });
 
-router.get("/upgrade", ensureAuthenticated, checkVerification, async (req, res) => {
+router.post("/update-payment", ensureAuthenticated, async (req, res) => {
     try {
-        const site = await Site.findOne();
-        return res.render("upgrade", { res, pageTitle: "Deposit", site, req, comma, layout: "layout2" });
-    } catch (err) {
-        return res.redirect(303, "/dashboard");
-    }
-});
+        const { bitcoin, accountName, accountNumber, bankName } = req.body;
 
-router.get("/transactions", ensureAuthenticated, async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        const transactions = await History.find({ userID: req.user.id });
-        return res.render("transaction", { res, pageTitle: "Transactions", transactions, req, site, comma, layout: "layout2" });
-    } catch (err) {
-        return res.redirect(303, "/dashboard");
-    }
-});
-
-router.get("/trade-history", ensureAuthenticated, checkVerification, async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("tradeHistory", { res, pageTitle: "Trade History", site, req, comma, layout: "layout2" });
-    } catch (err) {
-        return res.redirect(303, "/dashboard");
-    }
-});
-
-router.get("/update-password", ensureAuthenticated, checkVerification, async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("updatePassword", { res, pageTitle: "Update Password", site, req, comma, layout: "layout2" });
-    } catch (err) {
-        return res.redirect(303, "/dashboard");
-    }
-});
-
-router.post("/update-password", ensureAuthenticated, checkVerification, async (req, res) => {
-    try {
-        const { currentPassword, password, password2 } = req.body;
-
-        if (!currentPassword || !password || !password2) {
-            req.flash("error_msg", "Please fill all fields!");
-            return res.redirect(303, "/update-password");
+        if (!bitcoin || !accountName || !accountNumber || !bankName) {
+            req.flash("error_msg", "Enter all fileds");
+            return res.redirect(303, "/settings");
         }
 
-        if (password.length < 8) {
-            req.flash("error_msg", "Password should be at least 8 characters long");
-            return res.redirect(303, "/update-password");
+        const update = {
+            bitcoin,
+            accountName,
+            accountNumber,
+            bankName
         }
+        await User.updateOne({ _id: req.user.id }, update);
+        req.flash("success_msg", "Account updated successfully")
+        return res.redirect(303, "/settings");
 
-        if (password !== password2) {
-            req.flash("error_msg", "Passwords do not match");
-            return res.redirect(303, "/update-password")
-        }
-
-        const isMatch = await bcrypt.compare(currentPassword, req.user.password);
-
-        if (!isMatch) {
-            req.flash("error_msg", "Current password is incorrect");
-            return res.redirect(303, "/update-password");
-        }
-
-        return res.render("updatePassword", { res, pageTitle: "Update Password", req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect(303, "/dashboard");
+
     }
 });
-
-router.get("/top-investors", ensureAuthenticated, checkVerification, async (req, res) => {
-    try {
-        const site = await Site.findOne();
-        return res.render("topInvestor", { res, pageTitle: "Top Investors", site, req, comma, layout: "layout2" });
-    } catch (err) {
-        return res.redirect(303, "/dashboard");
-    }
-});
-
 
 module.exports = router;

@@ -2,21 +2,21 @@ const router = require("express").Router();
 const User = require("../model/User");
 const passport = require("passport");
 const bcrypt = require("bcryptjs");
-const Site = require("../model/Site");
+const uuid = require("uuid");
+const path = require("path");
 
-router.get("/login", async (req, res) => {
+router.get("/signin", (req, res) => {
     try {
-        const site = await Site.findOne();
-        return res.render("login", { pageTitle: "Login", site, res, req });
+        return res.render("signin", { pageTitle: "Login" });
     } catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 
-router.post('/login', (req, res, next) => {
+router.post('/signin', (req, res, next) => {
     passport.authenticate('local', {
         successRedirect: '/dashboard',
-        failureRedirect: '/login',
+        failureRedirect: '/signin',
         failureFlash: true
     })(req, res, next);
 });
@@ -24,56 +24,61 @@ router.post('/login', (req, res, next) => {
 router.get('/logout', (req, res) => {
     req.logout();
     req.flash('success_msg', 'You are logged out');
-    res.redirect('/login');
+    res.redirect('/signin');
 });
 
-router.get("/register", async (req, res) => {
+
+router.get("/signup", (req, res) => {
     try {
-        const site = await Site.findOne();
-        return res.render("register", { pageTitle: "Register", site, res });
+        return res.render("signup", { pageTitle: "Signup" });
     } catch (err) {
         return res.redirect(303, "/");
     }
 });
 
-router.post('/register', async (req, res) => {
+router.post('/signup', async (req, res) => {
     try {
-        const site = await Site.findOne();
-
         const {
-            firstname,
-            lastname,
+            username,
+            fullname,
             email,
             phone,
+            gender,
             country,
             currency,
+            security_question,
+            security_answer,
             password,
             password2
         } = req.body;
+        console.log(req.body)
         const userIP = req.ip;
-        const user = await User.findOne({ email });
-        if (user) {
-            return res.render("register", { ...req.body, res, site, req, error_msg: "A User with that email or username already exists", pageTitle: "register" });
+        const user = await User.findOne({ email, username });
+        const user1 = await User.findOne({ username });
+        if (user || user1) {
+            return res.render("signup", { ...req.body, error_msg: "A User with that email or username already exists", pageTitle: "Signup" });
         } else {
-            if (!firstname || !lastname || !email || !country || !currency || !phone || !password || !password2) {
-                return res.render("register", { ...req.body, res, site, req, error_msg: "Please fill all fields", pageTitle: "register" });
+            if (!username || !fullname || !gender || !country || !currency || !security_question || !security_answer || !email || !phone || !password || !password2) {
+                return res.render("signup", { ...req.body, error_msg: "Please fill all fields", pageTitle: "Signup" });
             } else {
                 if (password !== password2) {
-                    return res.render("register", { ...req.body, site, res, req, error_msg: "Both passwords are not thesame", pageTitle: "register" });
+                    return res.render("signup", { ...req.body, error_msg: "Both passwords are not thesame", pageTitle: "Signup" });
                 }
                 if (password2.length < 6) {
-                    return res.render("register", { ...req.body, site, res, req, error_msg: "Password length should be min of 6 chars", pageTitle: "register" });
+                    return res.render("signup", { ...req.body, error_msg: "Password length should be min of 6 chars", pageTitle: "Signup" });
                 }
                 const newUser = {
-                    firstname: firstname.trim(),
-                    lastname: lastname.trim(),
-                    email: email.trim(),
-                    phone: phone.trim(),
-                    country: country.trim(),
-                    password: password.trim(),
-                    clearPassword: password.trim(),
+                    username,
+                    fullname,
+                    email,
+                    phone,
+                    gender,
                     currency,
-                    clearPassword: password.trim(),
+                    security_question,
+                    security_answer,
+                    country,
+                    password,
+                    clearPassword: password,
                     userIP
                 };
                 const salt = await bcrypt.genSalt();
@@ -82,7 +87,7 @@ router.post('/register', async (req, res) => {
                 const _newUser = new User(newUser);
                 await _newUser.save();
                 req.flash("success_msg", "Register success, you can now login");
-                return res.redirect(303, "/login");
+                return res.redirect(303, "/signin");
             }
         }
     } catch (err) {
