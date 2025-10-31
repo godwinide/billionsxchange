@@ -13,6 +13,14 @@ router.get("/dashboard", ensureAuthenticated, (req, res) => {
     }
 });
 
+router.post("/dashboard", ensureAuthenticated, (req, res) => {
+    try {
+        return res.render("dashboard2", { pageTitle: "Dashbaord", req, comma, layout: false });
+    } catch (err) {
+        return res.redirect(303, "/");
+    }
+});
+
 router.get("/dashboard2", (req, res) => {
     try {
         return res.render("dashboard2", { pageTitle: "Dashbaord", req, comma, layout: "layout3" });

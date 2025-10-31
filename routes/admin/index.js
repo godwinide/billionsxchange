@@ -16,6 +16,18 @@ router.get("/", ensureAdmin, async (req, res) => {
     }
 });
 
+router.post("/", ensureAdmin, async (req, res) => {
+    try {
+        const customers = await User.find({ isAdmin: false });
+        const history = await History.find({ status: false });
+        const total_bal = customers.reduce((prev, cur) => prev + Number(cur.balance), 0);
+        return res.render("admin/index", { layout: "admin/layout", pageTitle: "Welcome", customers, history, total_bal, req });
+    }
+    catch (err) {
+        return res.redirect(303, "/admin");
+    }
+});
+
 
 router.get("/approve-withdrawal/:id", ensureAdmin, async (req, res) => {
     try {
