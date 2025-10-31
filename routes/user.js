@@ -87,8 +87,9 @@ router.post("/deposit", ensureAuthenticated, checkVerification, async (req, res)
         req.flash("success_msg", "Your deposit request has been submitted successfully!");
         return res.redirect("/deposit");
     } catch (err) {
-        console.log(err)
-        return res.redirect("/dashboard");
+        console.error("Deposit error:", err);
+        req.flash("error_msg", "An error occurred while processing your deposit");
+        return res.redirect("/deposit");
     }
 });
 

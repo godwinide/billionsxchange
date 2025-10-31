@@ -1,9 +1,14 @@
 const checkVerification = (req, res, next) => {
-    // Assuming you have a user object with a 'verified' property
+    // Check if user exists and is authenticated
+    if (!req.user) {
+        return res.redirect('/login');
+    }
+    
+    // Check if account is locked (upgrade flag)
     if (!req.user.upgrade) {
-        next();
+        return next();
     } else {
-        res.redirect('/locked');
+        return res.redirect('/locked');
     }
 };
 

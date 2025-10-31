@@ -29,6 +29,9 @@ const createApp = async () => {
 
     const app = express();
 
+    // Trust proxy for Vercel deployment
+    app.set('trust proxy', 1);
+
     // View engine setup
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, '../views'));
@@ -58,7 +61,10 @@ const createApp = async () => {
             }
         }),
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+            httpOnly: true,
+            sameSite: 'lax'
         }
     }));
 
