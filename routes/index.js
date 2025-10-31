@@ -9,7 +9,7 @@ router.get("/", async (req, res) => {
         return res.render("index", { pageTitle: "Welcome", site, req, res });
     }
     catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 
@@ -19,7 +19,7 @@ router.get("/about", async (req, res) => {
         return res.render("about-us", { pageTitle: "Welcome", site, req, res });
     }
     catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 
@@ -29,7 +29,7 @@ router.get("/contact-us", async (req, res) => {
         return res.render("contact-us", { pageTitle: "Welcome", site, req, res });
     }
     catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 
@@ -39,7 +39,7 @@ router.get("/market-data", async (req, res) => {
         return res.render("market-data", { pageTitle: "Welcome", site, req, res });
     }
     catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 
@@ -49,7 +49,7 @@ router.get("/services", async (req, res) => {
         return res.render("index", { pageTitle: "Welcome", site, req, res });
     }
     catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 
@@ -59,7 +59,7 @@ router.get("/faq", async (req, res) => {
         return res.render("faq", { pageTitle: "Welcome", site, req, res });
     }
     catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 

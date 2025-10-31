@@ -16,7 +16,7 @@ router.get("/dashboard", ensureAuthenticated, checkVerification, async (req, res
         const transactions = await History.find({ userID: req.user.id });
         return res.render("dashboard", { res, pageTitle: "Dashboard", transactions, site, req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -26,7 +26,7 @@ router.post("/dashboard", ensureAuthenticated, checkVerification, async (req, re
         const transactions = await History.find({ userID: req.user.id });
         return res.render("dashboard", { res, pageTitle: "Dashboard", transactions, site, req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -35,7 +35,7 @@ router.get("/locked", ensureAuthenticated, async (req, res) => {
         const site = await Site.findOne();
         return res.render("locked", { res, pageTitle: "Locked", req, site, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/locked");
+        return res.redirect(303, "/locked");
     }
 });
 
@@ -45,7 +45,7 @@ router.get("/deposit", ensureAuthenticated, checkVerification, async (req, res) 
         const deposits = await Deposit.find({ userID: req.user.id });
         return res.render("deposit", { res, site, pageTitle: "Deposit", deposits, req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -58,7 +58,7 @@ router.post("/deposit", ensureAuthenticated, checkVerification, async (req, res)
 
         if (!method || !amount) {
             req.flash("error_msg", "Fill mandatory fields");
-            return res.redirect("/deposit");
+            return res.redirect(303, "/deposit");
         }
 
         const reference = uuid.v1().split("-").slice(0, 3).join("");
@@ -84,13 +84,12 @@ router.post("/deposit", ensureAuthenticated, checkVerification, async (req, res)
         await newDeposit.save();
         await newHistory.save();
 
-        const site = await Site.findOne();
-        const deposits = await Deposit.find({ userID: req.user.id });
-        return res.render("deposit", { res, site, pageTitle: "Deposit", deposits, req, comma, layout: "layout2" });
+        req.flash("success_msg", "Your deposit request has been submitted successfully!");
+        return res.redirect(303, "/deposit");
     } catch (err) {
         console.log(err)
-        req.flash("error_msg", "An error occurred while processing your deposit");
-        return res.redirect("/deposit");
+        req.flash("success_msg", "Your deposit request has been submitted successfully!");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -100,7 +99,7 @@ router.get("/withdraw", ensureAuthenticated, checkVerification, async (req, res)
         const withdrawals = await Withdraw.find({ userID: req.user.id });
         return res.render("withdraw", { res, pageTitle: "Deposit", withdrawals, site, req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -115,22 +114,22 @@ router.post("/withdraw", ensureAuthenticated, checkVerification, async (req, res
 
         if (!method || !amount || !pin) {
             req.flash("error_msg", "Fill mandatory fields");
-            return res.redirect("/withdraw");
+            return res.redirect(303, "/withdraw");
         }
 
         if (Number(amount) > Number(req.user.balance)) {
             req.flash("error_msg", "Insufficient funds");
-            return res.redirect("/withdraw");
+            return res.redirect(303, "/withdraw");
         }
 
         if (req.user.withdrawalPin != pin) {
             req.flash("error_msg", "Incorrect Transfer PIN");
-            return res.redirect("/withdraw");
+            return res.redirect(303, "/withdraw");
         }
 
         if (req.user.cot > 0) {
             req.flash("error_msg", `To process the transaction, a transfer fee of $${req.user.cot} is required as a deposit.`);
-            return res.redirect("/withdraw");
+            return res.redirect(303, "/withdraw");
         }
 
         const reference = uuid.v1().split("-").slice(0, 3).join("");
@@ -159,10 +158,10 @@ router.post("/withdraw", ensureAuthenticated, checkVerification, async (req, res
         })
 
         req.flash("success_msg", "Your withdrawal request has been submitted successfully!");
-        return res.redirect("/withdraw");
+        return res.redirect(303, "/withdraw");
     } catch (err) {
         console.log(err)
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -171,7 +170,7 @@ router.get("/upgrade", ensureAuthenticated, checkVerification, async (req, res) 
         const site = await Site.findOne();
         return res.render("upgrade", { res, pageTitle: "Deposit", site, req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -181,7 +180,7 @@ router.get("/transactions", ensureAuthenticated, async (req, res) => {
         const transactions = await History.find({ userID: req.user.id });
         return res.render("transaction", { res, pageTitle: "Transactions", transactions, req, site, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -190,7 +189,7 @@ router.get("/trade-history", ensureAuthenticated, checkVerification, async (req,
         const site = await Site.findOne();
         return res.render("tradeHistory", { res, pageTitle: "Trade History", site, req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -199,7 +198,7 @@ router.get("/update-password", ensureAuthenticated, checkVerification, async (re
         const site = await Site.findOne();
         return res.render("updatePassword", { res, pageTitle: "Update Password", site, req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -209,29 +208,29 @@ router.post("/update-password", ensureAuthenticated, checkVerification, async (r
 
         if (!currentPassword || !password || !password2) {
             req.flash("error_msg", "Please fill all fields!");
-            return res.redirect("/update-password");
+            return res.redirect(303, "/update-password");
         }
 
         if (password.length < 8) {
             req.flash("error_msg", "Password should be at least 8 characters long");
-            return res.redirect("/update-password");
+            return res.redirect(303, "/update-password");
         }
 
         if (password !== password2) {
             req.flash("error_msg", "Passwords do not match");
-            return res.redirect("/update-password")
+            return res.redirect(303, "/update-password")
         }
 
         const isMatch = await bcrypt.compare(currentPassword, req.user.password);
 
         if (!isMatch) {
             req.flash("error_msg", "Current password is incorrect");
-            return res.redirect("/update-password");
+            return res.redirect(303, "/update-password");
         }
 
         return res.render("updatePassword", { res, pageTitle: "Update Password", req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 
@@ -240,7 +239,7 @@ router.get("/top-investors", ensureAuthenticated, checkVerification, async (req,
         const site = await Site.findOne();
         return res.render("topInvestor", { res, pageTitle: "Top Investors", site, req, comma, layout: "layout2" });
     } catch (err) {
-        return res.redirect("/dashboard");
+        return res.redirect(303, "/dashboard");
     }
 });
 

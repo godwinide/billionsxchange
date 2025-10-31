@@ -5,7 +5,7 @@ router.get("/signin", (req, res) => {
     try {
         return res.render("admin/signin", { layout: "admin/layout", pageTitle: "Login", req, res });
     } catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 

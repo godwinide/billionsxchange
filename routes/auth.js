@@ -32,7 +32,7 @@ router.get("/register", async (req, res) => {
         const site = await Site.findOne();
         return res.render("register", { pageTitle: "Register", site, res });
     } catch (err) {
-        return res.redirect("/");
+        return res.redirect(303, "/");
     }
 });
 
@@ -82,7 +82,7 @@ router.post('/register', async (req, res) => {
                 const _newUser = new User(newUser);
                 await _newUser.save();
                 req.flash("success_msg", "Register success, you can now login");
-                return res.redirect("/login");
+                return res.redirect(303, "/login");
             }
         }
     } catch (err) {
