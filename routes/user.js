@@ -51,44 +51,46 @@ router.get("/deposit", ensureAuthenticated, checkVerification, async (req, res) 
 
 router.post("/deposit", ensureAuthenticated, checkVerification, async (req, res) => {
     try {
-        // const {
-        //     method,
-        //     amount
-        // } = req.body;
+        const {
+            method,
+            amount
+        } = req.body;
 
-        // if (!method || !amount) {
-        //     req.flash("error_msg", "Fill mandatory fields");
-        //     return res.redirect("/deposit");
-        // }
+        if (!method || !amount) {
+            req.flash("error_msg", "Fill mandatory fields");
+            return res.redirect("/deposit");
+        }
 
-        // const reference = uuid.v1().split("-").slice(0, 3).join("");
+        const reference = uuid.v1().split("-").slice(0, 3).join("");
 
-        // const newDeposit = new Deposit({
-        //     amount: Number(amount),
-        //     method,
-        //     userID: req.user.id,
-        //     user: req.user,
-        //     reference
-        // });
+        const newDeposit = new Deposit({
+            amount: Number(amount),
+            method,
+            userID: req.user.id,
+            user: req.user,
+            reference
+        });
 
-        // const newHistory = new History({
-        //     amount: Number(amount),
-        //     method,
-        //     type: 'DEPOSIT',
-        //     userID: req.user.id,
-        //     user: req.user,
-        //     reference
-        // });
+        const newHistory = new History({
+            amount: Number(amount),
+            method,
+            type: 'DEPOSIT',
+            userID: req.user.id,
+            user: req.user,
+            reference
+        });
 
 
-        // await newDeposit.save();
-        // await newHistory.save();
+        await newDeposit.save();
+        await newHistory.save();
 
-        // req.flash("success_msg", "Your deposit request has been submitted successfully!");
-        return res.redirect("/deposit");
+        const site = await Site.findOne();
+        const deposits = await Deposit.find({ userID: req.user.id });
+        return res.render("deposit", { res, site, pageTitle: "Deposit", deposits, req, comma, layout: "layout2" });
     } catch (err) {
         console.log(err)
-        return res.redirect("/dashboard");
+        req.flash("error_msg", "An error occurred while processing your deposit");
+        return res.redirect("/deposit");
     }
 });
 
